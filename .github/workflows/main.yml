@@ -22,7 +22,7 @@ jobs:
       - name: Clone pos-frontend- Repository
         run: |
           git clone https://github.com/NaveedAliKhan4177/pos-frontend-.git
-          ls -l pos-frontend  # Debug to confirm folder exists
+          ls -l pos-frontend-  # Debug to confirm folder exists
 
       # 3️⃣ Login to Docker Hub
       - name: Login to Docker Hub
