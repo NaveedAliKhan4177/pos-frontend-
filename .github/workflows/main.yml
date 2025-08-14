@@ -35,8 +35,8 @@ jobs:
       - name: Build and Push Frontend Image
         run: |
           cd pos-frontend-
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/pos-frontend-:latest .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/pos-frontend-:latest
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/pos-frontend:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/pos-frontend:latest
 
       # 5️⃣ Configure AWS Credentials
       - name: Configure AWS credentials
