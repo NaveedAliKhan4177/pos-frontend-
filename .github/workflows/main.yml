@@ -1,56 +1,52 @@
-name: Deploy to Amazon ECS
+name: Deploy Frontend to AWS ECS
 
 on:
   push:
     branches:
-      - main
+      - main  # Runs when frontend repo is updated
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: "ap-south-1"
+      ECS_CLUSTER: "staging-cluster"
+      ECS_SERVICE_FRONTEND: "pos-frontend"
 
     steps:
+      # 1️⃣ Checkout the Repository
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
+      # 2️⃣ Clone `pos-frontend` Repository
+      - name: Clone pos-frontend- Repository
+        run: |
+          git clone https://github.com/NaveedAliKhan4177/pos-frontend-.git
+          ls -l pos-frontend-  # Debug to confirm folder exists
+
+      # 3️⃣ Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      # 4️⃣ Build & Push Frontend Image
+      - name: Build and Push Frontend Image
+        run: |
+          cd pos-frontend-
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/pos-frontend:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/pos-frontend:latest
+
+      # 5️⃣ Configure AWS Credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build, tag, and push Docker image to ECR
+      # 6️⃣ Force ECS to Pull Latest Frontend Image
+      - name: Force ECS Service Update
         run: |
-          IMAGE_TAG=$(date +%s)
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-          docker build -t ${{ secrets.ECR_REPO }}:$IMAGE_TAG .
-          docker push ${{ secrets.ECR_REPO }}:$IMAGE_TAG
-
-      - name: Render ECS task definition
-        id: task-def
-        run: |
-          jq --arg IMAGE "${{ secrets.ECR_REPO }}:${IMAGE_TAG}" \
-             '.containerDefinitions[0].image = $IMAGE' ecs-task-def.json > ecs-task-def-updated.json
-
-      - name: Register ECS task definition
-        id: register-task-def
-        run: |
-          aws ecs register-task-definition \
-            --cli-input-json file://ecs-task-def-updated.json \
-            --region ap-south-1 \
-            --query 'taskDefinition.taskDefinitionArn' \
-            --output text > task-def-arn.txt
-          echo "TASK_DEF_ARN=$(cat task-def-arn.txt)" >> $GITHUB_ENV
-
-      - name: Update ECS service
-        run: |
-          aws ecs update-service \
-            --cluster ${{ secrets.ECS_CLUSTER_NAME }} \
-            --service ${{ secrets.ECS_SERVICE_NAME }} \
-            --task-definition ${{ env.TASK_DEF_ARN }} \
-            --region ap-south-1
+          aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE_FRONTEND --force-new-deployment
