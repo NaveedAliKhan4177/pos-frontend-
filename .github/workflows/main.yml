@@ -3,7 +3,7 @@ name: Deploy Frontend to AWS ECS
 on:
   push:
     branches:
-      - staging  # Runs when frontend repo is updated
+      - main  # Runs when frontend repo is updated
 
 jobs:
   deploy:
